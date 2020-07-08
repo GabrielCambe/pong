@@ -20,8 +20,9 @@ function love.load()
         --     resizable = false,
         --     vsync = true,
         -- })
-
         love.graphics.setDefaultFilter('nearest', 'nearest')
+
+        love.window.setTitle('Pong')
         
         math.randomseed(os.time())
 
@@ -136,5 +137,16 @@ function love.draw()
     -- the ball
     ball:render()
 
+    displayFPS()
+
     push:finish()
+end
+
+function displayFPS()
+    love.graphics.setFont(smallfont)
+    love.graphics.setColor(0, 255/255, 0, 255/255)
+    love.graphics.print(
+        'FPS: ' .. tostring(love.timer.getFPS()),
+        10, 10
+    )
 end

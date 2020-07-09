@@ -13,6 +13,7 @@ VIRTUAL_HEIGHT = 243
 
 PADDLE_SPEED = 200
 
+
 -- Set up function on the LOVE2D framework
 function love.load()
         -- love.window.setMode(WINDOW_WIDTH, WINDOW_HEIGHT, {
@@ -30,12 +31,15 @@ function love.load()
         smallfont = love.graphics.newFont('font.ttf', 8)
         largefont = love.graphics.newFont('font.ttf', 16)
         scorefont = love.graphics.newFont('font.ttf', 32)
+        titlefont = love.graphics.newFont('font.ttf', 64)
+        
         love.graphics.setFont(smallfont)
 
         sounds = {
             ['paddle_hit'] = love.audio.newSource('sounds/paddle_hit.wav', 'static'),
             ['score'] = love.audio.newSource('sounds/score.wav', 'static'),
-            ['wall_hit'] = love.audio.newSource('sounds/wall_hit.wav', 'static')
+            ['wall_hit'] = love.audio.newSource('sounds/wall_hit.wav', 'static'),
+            ['selection'] = love.audio.newSource('sounds/selection.wav', 'static')
         }
 
         push:setupScreen(
@@ -55,7 +59,9 @@ function love.load()
         player2 = Paddle(VIRTUAL_WIDTH - 10, VIRTUAL_HEIGHT - 30, 5, 20)
         ball = Ball(VIRTUAL_WIDTH/2 -2, VIRTUAL_HEIGHT/2 -2, 4, 4)
 
-        gameState = 'start'
+        AIplaying = false
+        selectionState = '1Player'        
+        gameState = 'menu'
 end
 
 function love.resize(w, h)
@@ -111,7 +117,7 @@ function love.update(dt)
 
 
         if ball.x < 0 then
-            sounds.scoret:play()
+            sounds.score:play()
             
             servingPlayer = 1
             player2Score = player2Score + 1
@@ -127,7 +133,7 @@ function love.update(dt)
         end
     
         if ball.x > VIRTUAL_WIDTH then
-            sounds.socre:play()
+            sounds.score:play()
 
             servingPlayer = 2
             player1Score = player1Score + 1
@@ -138,8 +144,9 @@ function love.update(dt)
                 gameState = 'serve'
                 ball:reset()
             end
-        end
+        end       
     end
+
 
 
     if love.keyboard.isDown('w') then
@@ -150,11 +157,19 @@ function love.update(dt)
         player1.dy = 0
     end
 
-    if love.keyboard.isDown('up') then
+    if AIplaying == true and gameState == 'play' then 
+        if math.abs(ball.y - player2.y) >= 3 then
+            player2.dy = ((ball.y - player2.y)/math.abs(ball.y - player2.y)) * PADDLE_SPEED
+        else
+            player2.dy = 0
+        end
+    end
+
+    if love.keyboard.isDown('up') and not AIplaying then
         player2.dy = -PADDLE_SPEED
-    elseif love.keyboard.isDown('down') then
+    elseif love.keyboard.isDown('down') and not AIplaying then
         player2.dy = PADDLE_SPEED
-    else
+    elseif not AIplaying then
         player2.dy = 0
     end
 
@@ -172,7 +187,14 @@ function love.keypressed(key)
         love.event.quit()
     
     elseif key == 'enter' or key == 'return' then
-        if gameState == 'start' then
+        if gameState == 'menu' then
+            if selectionState == '1Player' then
+                AIplaying = true
+            else
+                AIplaying = false
+            end
+            gameState = 'start'    
+        elseif gameState == 'start' then
             gameState = 'serve'
         elseif gameState == 'serve' then
             gameState = 'play'
@@ -189,7 +211,17 @@ function love.keypressed(key)
             else
                 servingPlayer = 1
             end
+        end        
+    elseif key == 'w' or key == 'up' or key == 's' or key == 'down' then
+        if gameState == 'menu' then
+            if selectionState == '1Player' then
+                selectionState = '2Players'
+            else
+                selectionState = '1Player'
+            end
+            sounds.selection:play()
         end
+ 
     end
 end
 
@@ -199,9 +231,45 @@ function love.draw()
     -- wash the screen with the RGBA color passed as an argument
     love.graphics.clear((40/255), (45/255), (52/255), (255/255))
     
-    displayScore()
+    if gameState == 'menu' then
+        love.graphics.setFont(titlefont)
+        love.graphics.printf(
+            "PONG!",
+            0, VIRTUAL_HEIGHT/4,
+            VIRTUAL_WIDTH,
+            'center'
+        )
+        love.graphics.setFont(largefont)
+        
+        love.graphics.printf(
+            "1 Player",
+            0, VIRTUAL_HEIGHT/4 + 74,
+            VIRTUAL_WIDTH,
+            'center'
+        )
+        love.graphics.printf(
+            "2 Players",
+            0, VIRTUAL_HEIGHT/4 + 94,
+            VIRTUAL_WIDTH,
+            'center'
+        )
 
-    if gameState == 'start' then
+        if selectionState == '1Player' then
+            love.graphics.rectangle(
+                'line',
+                VIRTUAL_WIDTH/2 - 48, VIRTUAL_HEIGHT/4 + 74,
+                96, 18
+            )
+        else
+            love.graphics.rectangle(
+                'line',
+                VIRTUAL_WIDTH/2 - 48, VIRTUAL_HEIGHT/4 + 94,
+                96, 18
+            
+            )
+        end
+
+    elseif gameState == 'start' then
         love.graphics.setFont(smallfont)
         love.graphics.printf(
             "Let's play PONG!",
@@ -238,9 +306,13 @@ function love.draw()
         )
     end
 
-    player1:render()
-    player2:render()
-    ball:render()
+    if gameState ~= 'menu' then
+        player1:render()
+        player2:render()
+        ball:render()
+        displayScore()
+
+    end
 
     displayFPS()
 
